@@ -1,4 +1,4 @@
-import { HELPER_PATH } from '@immediately-run/transpiler';
+import { HELPER_PATH } from '@lofcz/transpiler';
 
 import {
   createBundlerHarness,
