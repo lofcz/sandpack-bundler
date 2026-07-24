@@ -45,7 +45,8 @@
     "default": {
       "distDir": "dist",
       "context": "browser",
-      "includeNodeModules": true
+      "includeNodeModules": true,
+      "publicUrl": "./"
     },
     "babelWorker": {
       "source": "src/bundler/transforms/babel/babel-worker.ts",

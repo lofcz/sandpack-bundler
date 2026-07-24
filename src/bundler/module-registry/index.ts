@@ -2,6 +2,7 @@ import * as logger from '../../utils/logger';
 import { sortObj } from '../../utils/object';
 import { Bundler } from '../bundler';
 import { Module } from '../module/Module';
+import { scanCjsModule } from '../transforms/raw-cjs/scan';
 import { filterBuildDeps } from './build-dep';
 import { depMapsEqual, locksetClosureValid, LocksetSection } from './lockset';
 import { ICDNModule, ICDNModuleFile, IResolvedDependency, fetchManifest, fetchModule } from './module-cdn';
@@ -12,6 +13,17 @@ import {
   parseBundledIndex,
 } from './bundledPackages';
 import { NodeModule } from './NodeModule';
+
+/**
+ * CDN packages are marked precompiled (`Module(..., isCompiled: true)`) and skip
+ * Babel. Only trust that when the CDN claims success (`t !== false`) AND the
+ * body has no residual ESM `import`/`export` (historical SWC helper-order bug
+ * left bare imports → "$csb$eval: Cannot use import statement outside a module").
+ */
+function trustCdnPrecompiled(file: ICDNModuleFile): boolean {
+  if (file.t === false) return false;
+  return !scanCjsModule(file.c).isEsm;
+}
 
 // dependency => version range
 export type DepMap = { [depName: string]: string };
@@ -184,7 +196,13 @@ export class ModuleRegistry {
       return [];
     }
 
-    const module = new Module(path, file.c, true, this.bundler);
+    const precompiled = trustCdnPrecompiled(file);
+    if (!precompiled) {
+      logger.warn(
+        `CDN module ${path} not trusted as precompiled (t=${String(file.t)}); routing through Babel`,
+      );
+    }
+    const module = new Module(path, file.c, precompiled, this.bundler);
     this.bundler.modules.set(path, module);
     return file.d.map((dep) => {
       return async () => {

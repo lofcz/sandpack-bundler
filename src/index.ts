@@ -1,3 +1,6 @@
+// Cache-bust marker: force a new entry hash when deploying to Priprava so
+// browsers cannot keep a stale index.html → missing sandpack-bundler.*.js.
+// rev: 20260725-precompiled-esm-guard
 import { fs, mount, umount, configure, resolveMountConfig, bindContext } from '@zenfs/core';
 import { Port } from '@zenfs/core/backends/port.js';
 
