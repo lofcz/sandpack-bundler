@@ -39,6 +39,9 @@ export class IFrameParentMessageBus {
       const config: IInitConfig = {
         template: data.template,
         logLevel: data.logLevel,
+        // Self-hosted CDN root (Priprava `/sandpack-cdn/`) — pin before any
+        // package fetch so we never hit a public staging CDN.
+        sandpackCdnRoot: data.sandpackCdnRoot,
         // Forwarded verbatim by the sandpack client's `register({...config})`
         // (no fork change needed); present only once the host wires delivery.
         sdkIntegrity: data.sdkIntegrity,

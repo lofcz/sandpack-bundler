@@ -104,6 +104,52 @@ export class ModuleRegistry {
         return this.fetchNodeModule(dep.n, dep.v);
       })
     );
+    // Close over CDN-reported used modules (`ICDNModule.m`) that `/dep_tree`
+    // omitted. Flat Sandpack installs only what dep_tree returns; some CDNs
+    // (e.g. transforms that inject `@swc/helpers`) list those edges on the
+    // package but forget them in dep_tree — pull them in so `require()` works
+    // without host-side IMPLIED_PEERS hacks or agent `pkg add` hints.
+    await this.fetchUsedModuleClosure();
+  }
+
+  /**
+   * BFS-fetch packages named in each loaded module's `m` list until the set is
+   * closed. Versions come from a fresh `/dep_tree` of `{ name: "latest" }`.
+   */
+  private async fetchUsedModuleClosure(): Promise<void> {
+    const attempted = new Set<string>();
+    for (;;) {
+      const missing: DepMap = {};
+      for (const nodeModule of this.modules.values()) {
+        for (const used of nodeModule.modules) {
+          if (!used || used.startsWith('.') || used.startsWith('/')) continue;
+          if (this.modules.has(used) || missing[used] || attempted.has(used)) continue;
+          missing[used] = 'latest';
+        }
+      }
+      const names = Object.keys(missing);
+      if (names.length === 0) return;
+
+      for (const name of names) attempted.add(name);
+      logger.debug('Fetching used-module closure omitted by dep_tree', missing);
+      let extra: IResolvedDependency[];
+      try {
+        extra = await fetchManifest(missing);
+      } catch (err) {
+        logger.warn('used-module closure dep_tree failed; continuing without', missing, err);
+        return;
+      }
+      if (extra.length === 0) {
+        logger.warn('used-module closure resolved empty; continuing without', missing);
+        return;
+      }
+      for (const dep of extra) {
+        if (!this.manifest.some((m) => m.n === dep.n)) {
+          this.manifest.push(dep);
+        }
+      }
+      await Promise.all(extra.map((dep) => this.fetchNodeModule(dep.n, dep.v)));
+    }
   }
 
   private async _fetchModule(name: string, version: string): Promise<NodeModule> {

@@ -10,6 +10,12 @@ import { SandpackLogLevel } from '../utils/logger';
 export interface IInitConfig {
   template: string;
   logLevel?: SandpackLogLevel;
+  /**
+   * Absolute root of the self-hosted sandpack-cdn (`…/sandpack-cdn/`).
+   * Required for package installs — the opaque-origin iframe must not fall
+   * back to any public CDN.
+   */
+  sandpackCdnRoot?: string;
   // Host-pinned SDK integrity hashes (SDK_PACKAGING_SPEC §5.2): keyed module →
   // version → { fileRel: 'sha384-<b64>' }. Delivered on register-frame so the
   // bundler can verify self-hosted SDK bytes before evaluation. Optional — when

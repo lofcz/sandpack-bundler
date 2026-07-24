@@ -1,5 +1,5 @@
 import * as logger from '../../utils/logger';
-import evaluate from './eval';
+import evaluate, { getExtendedSwcHelpers } from './eval';
 import { HotContext } from './hot';
 import { Module } from './Module';
 
@@ -70,6 +70,13 @@ export class Evaluation {
   }
 
   require(specifier: string): any {
+    // SWC external-helpers emit (`var swcHelpers = require("@swc/helpers")`)
+    // expects camelCase helpers. The npm CJS build is snake_case — serve the
+    // same mapped namespace the eval scope injects as the `swcHelpers` global.
+    if (specifier === '@swc/helpers') {
+      return getExtendedSwcHelpers();
+    }
+
     const moduleFilePath = this.module.dependencyMap.get(specifier);
     if (!moduleFilePath) {
       logger.debug('Require', {

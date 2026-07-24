@@ -28,4 +28,11 @@ describe('IFrameParentMessageBus register-frame', () => {
     const config = await bus.getInitConfig();
     expect(config.dirtyPaths).toBeUndefined();
   });
+
+  it('reads sandpackCdnRoot into the init config', async () => {
+    const bus = new IFrameParentMessageBus();
+    registerFrame({ sandpackCdnRoot: 'http://localhost:44298/sandpack-cdn/' });
+    const config = await bus.getInitConfig();
+    expect(config.sandpackCdnRoot).toBe('http://localhost:44298/sandpack-cdn/');
+  });
 });

@@ -23,6 +23,11 @@ for (let [snake_case, v] of Object.entries(swcHelpers)) {
   }
 }
 
+/** CamelCase + snake_case namespace matching SWC's `require("@swc/helpers")` emit. */
+export function getExtendedSwcHelpers(): typeof extendedSWCHelpers {
+  return extendedSWCHelpers;
+}
+
 const hasGlobalDeclaration = /^const global/m;
 
 /* eslint-disable no-unused-vars */
@@ -67,7 +72,13 @@ export default function (
     return context.exports;
   } catch (err) {
     logger.error(err);
-    logger.error(code);
+    // Never console.error the whole module body — agent problem collection
+    // folds console errors into lint and would dump 100KB+ of minified source.
+    if (typeof code === 'string' && code.length > 240) {
+      logger.error(`${code.slice(0, 240)}… [eval source truncated, ${code.length} chars]`);
+    } else {
+      logger.error(code);
+    }
 
     let error = err;
     if (typeof err === 'string') {

@@ -4,38 +4,59 @@ import urlJoin from 'url-join';
 import { retryFetch, registerImmutableUrlPrefix } from '../../utils/fetch';
 import { DepMap } from '.';
 
-// Package CDN root. Prefer build-time SANDPACK_CDN_ROOT (Parcel inlines
-// `process.env.*`). When unset, derive from the bundler document URL so a
-// Priprava-hosted build at `/sandpack-bundler/` automatically hits the sibling
-// `/sandpack-cdn/` reverse-proxy — absolute URLs only (opaque-origin iframe).
-const FALLBACK_CDN_ROOT = 'https://sandpack-cdn-staging.blazingly.io/';
+// Package CDN root — self-hosted only (Priprava `/sandpack-cdn/`). Never a
+// public third-party CDN. Resolution order:
+//  1) {@link setCdnRoot} from the parent `register-frame` handshake (preferred;
+//     opaque-origin iframes cannot reliably derive a host from location)
+//  2) build-time `SANDPACK_CDN_ROOT` (Parcel inlines `process.env.*`)
+//  3) sibling of the bundler document URL (`…/sandpack-bundler/` → `…/sandpack-cdn/`)
 
 function normalizeCdnRoot(root: string): string {
   return root.endsWith('/') ? root : `${root}/`;
 }
 
-function resolveCdnRoot(): string {
-  const fromEnv = process.env.SANDPACK_CDN_ROOT;
-  if (fromEnv && fromEnv.length > 0) return normalizeCdnRoot(fromEnv);
-  try {
-    // Use href, not location.origin — sandboxed opaque origins report "null".
-    const u = new URL(self.location.href);
-    return `${u.origin}/sandpack-cdn/`;
-  } catch {
-    return FALLBACK_CDN_ROOT;
-  }
-}
-
 let cdnRootCached: string | null = null;
 
-/** Lazily resolve + register the immutable `/package/` prefix once. */
-function cdnRoot(): string {
-  if (cdnRootCached) return cdnRootCached;
-  cdnRootCached = resolveCdnRoot();
+/**
+ * Pin the CDN root from the host handshake. Must run before the first
+ * `/dep_tree` or `/package` fetch.
+ */
+export function setCdnRoot(root: string): void {
+  if (!root || typeof root !== 'string') {
+    throw new Error('setCdnRoot: expected a non-empty sandpack CDN URL');
+  }
+  cdnRootCached = normalizeCdnRoot(root);
   // /package/<name@exact-version> never changes for a given URL → cache-first.
   // /dep_tree/ is NOT registered: it resolves semver ranges and can change.
   registerImmutableUrlPrefix(urlJoin(cdnRootCached, '/package/'));
-  return cdnRootCached;
+}
+
+function resolveCdnRoot(): string {
+  if (cdnRootCached) return cdnRootCached;
+  const fromEnv = process.env.SANDPACK_CDN_ROOT;
+  if (fromEnv && fromEnv.length > 0) {
+    setCdnRoot(fromEnv);
+    return cdnRootCached!;
+  }
+  try {
+    // Use href, not location.origin — sandboxed opaque origins report "null".
+    const u = new URL(self.location.href);
+    if (u.protocol === 'http:' || u.protocol === 'https:') {
+      setCdnRoot(`${u.origin}/sandpack-cdn/`);
+      return cdnRootCached!;
+    }
+  } catch {
+    // fall through
+  }
+  throw new Error(
+    'Sandpack CDN root not configured. The host must pass sandpackCdnRoot on register-frame ' +
+      '(Priprava /sandpack-cdn/), or set SANDPACK_CDN_ROOT at bundler build time.',
+  );
+}
+
+/** Lazily resolve + register the immutable `/package/` prefix once. */
+function cdnRoot(): string {
+  return resolveCdnRoot();
 }
 
 export interface IResolvedDependency {

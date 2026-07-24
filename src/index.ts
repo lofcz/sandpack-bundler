@@ -2,6 +2,7 @@ import { fs, mount, umount, configure, resolveMountConfig, bindContext } from '@
 import { Port } from '@zenfs/core/backends/port.js';
 
 import { Bundler } from './bundler/bundler';
+import { setCdnRoot } from './bundler/module-registry/module-cdn';
 import { ErrorRecord, listenToRuntimeErrors } from './error-listener';
 import { BundlerError } from './errors/BundlerError';
 import { CompilationError } from './errors/CompilationError';
@@ -284,6 +285,10 @@ class SandpackInstance {
     const initConfig = await this.messageBus.getInitConfig();
     if (initConfig.logLevel != null) {
       logger.setLogLevel(initConfig.logLevel);
+    }
+    // Pin the self-hosted CDN before any dep_tree/package fetch.
+    if (initConfig.sandpackCdnRoot) {
+      setCdnRoot(initConfig.sandpackCdnRoot);
     }
     this.template = initConfig.template;
     // Host-pinned SDK integrity (SDK_PACKAGING_SPEC §5.2): hand it to the bundler
