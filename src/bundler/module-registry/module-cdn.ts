@@ -4,7 +4,12 @@ import urlJoin from 'url-join';
 import { retryFetch, registerImmutableUrlPrefix } from '../../utils/fetch';
 import { DepMap } from '.';
 
-const CDN_ROOT = 'https://sandpack-cdn-staging.blazingly.io/';
+// The package CDN root. Configured at build time via SANDPACK_CDN_ROOT
+// (Parcel inlines `process.env.*`) so we can point at the self-hosted
+// sandpack-cdn (e.g. https://app.sciobot.cz/sandpack-cdn/) instead of the
+// flaky public staging CDN. Must be an absolute URL: the bundler runs in an
+// opaque-origin iframe, so relative URLs cannot resolve to the host.
+const CDN_ROOT = process.env.SANDPACK_CDN_ROOT || 'https://sandpack-cdn-staging.blazingly.io/';
 
 // /package/<name@exact-version> responses never change for a given URL, so
 // retryFetch serves them cache-first from the persistent immutable cache.
