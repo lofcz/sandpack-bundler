@@ -902,7 +902,19 @@ export class Bundler {
     return this.fs.drainPendingChanges();
   }
 
-  async compile(): Promise<() => any> {
+  /**
+   * Signal an imminent `location.reload()` and return `null` so `runCompile`
+   * does not emit a false terminal `done`/`success` for the aborted compile.
+   */
+  private beginReload(reason: string): null {
+    logger.debug(reason);
+    this.onStatusChangeEmitter.fire('reloading');
+    location.reload();
+    return null;
+  }
+
+  /** `null` means the page is reloading — caller must not treat it as success. */
+  async compile(): Promise<(() => any) | null> {
     if (!this.preset) {
       throw new BundlerError('Cannot compile before preset has been initialized');
     }
@@ -974,9 +986,7 @@ export class Bundler {
       // reload loop.
       const changesNeedingHMR = changedFiles.filter((f) => f !== underAppRoot('/package.json'));
       if (!this.hasHMR && changesNeedingHMR.length) {
-        logger.debug('HMR is not enabled, doing a full page refresh');
-        window.location.reload();
-        return () => { };
+        return this.beginReload('HMR is not enabled, doing a full page refresh');
       }
     } else {
       // First load: files are read lazily from zenfs as the bundler traverses
@@ -1020,9 +1030,7 @@ export class Bundler {
         .join(',');
 
       if (this._previousDepString != null && depString !== this._previousDepString) {
-        logger.debug('Dependencies changed, reloading');
-        location.reload();
-        return () => { };
+        return this.beginReload('Dependencies changed, reloading');
       }
 
       this._previousDepString = depString;
@@ -1238,7 +1246,7 @@ export class Bundler {
     const html = (await this.getHTMLEntry()) ?? '<div id="root"></div>';
     if (this.lastHTML) {
       if (this.lastHTML !== html) {
-        window.location.reload();
+        this.beginReload('HTML entry changed, reloading');
       }
       return;
     } else {

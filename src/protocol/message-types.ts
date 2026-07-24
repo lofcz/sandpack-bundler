@@ -42,4 +42,6 @@ export type BundlerStatus =
   | 'transpiling'
   | 'evaluating'
   | 'running-tests'
-  | 'idle';
+  | 'idle'
+  /** Dependencies/HTML changed — page is about to `location.reload()`; not a terminal ok. */
+  | 'reloading';

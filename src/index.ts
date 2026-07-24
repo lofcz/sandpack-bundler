@@ -544,32 +544,38 @@ class SandpackInstance {
     logger.groupEnd();
 
     // --- Bundling / Compiling
+    // Terminal ok is ONLY after evaluate succeeds (`success` + `done` with
+    // compilatonError:false). Transpile-only `done` before eval was removed so
+    // hosts do not need a post-evaluate grace timeout. A dep/HTML reload returns
+    // null from compile() after emitting status:reloading — do not settle.
     logger.groupCollapsed(logger.logFactory('Bundling'));
     const bundlingStartTime = Date.now();
-    const evaluate = await this.bundler
-      .compile()
-      .then((val) => {
-        this.messageBus.sendMessage('done', {
-          compilatonError: false,
-        });
+    let evaluate: (() => unknown) | null | undefined;
+    let compileFailed = false;
+    try {
+      evaluate = await this.bundler.compile();
+    } catch (error: unknown) {
+      compileFailed = true;
+      logger.error(error);
+      this.messageBus.sendMessage('action', errorMessage(error as CompilationError));
+      this.messageBus.sendMessage('done', { compilatonError: true });
+    } finally {
+      logger.debug(logger.logFactory('Bundling', `finished in  ${Date.now() - bundlingStartTime}ms`));
+      logger.groupEnd();
+    }
 
-        return val;
-      })
-      .catch((error: CompilationError) => {
-        logger.error(error);
+    if (compileFailed) {
+      logger.debug(logger.logFactory('Finished', `in ${Date.now() - bundlerStartTime}ms`));
+      this.messageBus.sendMessage('status', { status: 'done' });
+      return;
+    }
 
-        this.messageBus.sendMessage('action', errorMessage(error));
+    // Page is reloading (deps / HTML / non-HMR edit) — no terminal ok/error.
+    if (evaluate === null) {
+      return;
+    }
 
-        this.messageBus.sendMessage('done', {
-          compilatonError: true,
-        });
-      })
-      .finally(() => {
-        logger.debug(logger.logFactory('Bundling', `finished in  ${Date.now() - bundlingStartTime}ms`));
-        logger.groupEnd();
-      });
-
-    // --- Replace HTML
+    // --- Replace HTML (may itself trigger reloading)
     await this.bundler.replaceHTML();
 
     // --- Evaluation
@@ -582,7 +588,9 @@ class SandpackInstance {
 
         evaluate();
 
+        // Terminal ok: evaluate finished without throwing.
         this.messageBus.sendMessage('success');
+        this.messageBus.sendMessage('done', { compilatonError: false });
 
         logger.debug(logger.logFactory('Evaluation', `finished in ${Date.now() - evalStartTime}ms`));
         logger.groupEnd();
@@ -593,6 +601,7 @@ class SandpackInstance {
           'action',
           errorMessage(error as BundlerError) // TODO: create a evaluation error
         );
+        this.messageBus.sendMessage('done', { compilatonError: true });
       }
 
       this.initResizeEvent();
