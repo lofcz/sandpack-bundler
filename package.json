@@ -72,6 +72,7 @@
     "console-feed": "3.8.0",
     "gensync": "^1.0.0-beta.2",
     "kerium": "^1.3.9",
+    "lightningcss-wasm": "^1.33.0",
     "micromatch": "^4.0.5",
     "p-queue": "^6.6.2",
     "postcss": "^8.4.14",
