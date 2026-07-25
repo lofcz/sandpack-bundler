@@ -17,7 +17,7 @@ import {
 // become the regression net the G2-5 integration leans on.
 
 const validToolchain = {
-  transpiler: '@immediately-run/transpiler',
+  transpiler: '@lofcz/transpiler',
   version: '1.2.3',
   toolchainHash: 'abc123',
   preset: 'react',

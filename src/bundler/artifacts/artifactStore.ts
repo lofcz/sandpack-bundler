@@ -1,5 +1,5 @@
 import { APP_ROOT, MANIFEST_SIDECAR_PATH, stripAppRoot, underAppRoot } from '../../fsLayout';
-import { transformFile } from '@immediately-run/transpiler';
+import { transformFile } from '@lofcz/transpiler';
 import {
   ARTIFACTS_DIR,
   type ArtifactIndex,

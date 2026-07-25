@@ -1,9 +1,9 @@
 import * as logger from '../../../utils/logger';
 import { WorkerMessageBus } from '../../../utils/WorkerMessageBus';
-import { transformBabel, type ITransformData } from '@immediately-run/transpiler';
+import { transformBabel, type ITransformData } from '@lofcz/transpiler';
 
 // The actual transform (babel presets/plugins + dep collection) now lives in
-// @immediately-run/transpiler so the CLI's pre-transpiled artifacts are
+// @lofcz/transpiler so the CLI's pre-transpiled artifacts are
 // byte-identical to this live transpile (PRETRANSPILED_ARTIFACTS_SPEC §4.4).
 // This module keeps only the worker transport: the parent page spawns it and
 // bridges a MessagePort to the sandboxed iframe.

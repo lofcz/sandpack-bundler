@@ -10,6 +10,6 @@ export const errorMessage = (error: BundlerError) => {
     message: error.message,
     line: error.line,
     column: error.column,
-    payload: { frames: [] },
+    payload: { frames: [], stack: (error as Error)?.stack },
   };
 };

@@ -1,4 +1,4 @@
-import { TRANSPILER_VERSION } from '@immediately-run/transpiler';
+import { TRANSPILER_VERSION } from '@lofcz/transpiler';
 
 import { createBundlerHarness, type BundlerHarness } from '../testHarness/bundlerHarness';
 import { EMBEDDED_TOOLCHAIN_HASH } from './embeddedToolchainHash';
@@ -25,7 +25,7 @@ const baseFixture = (over: { toolchainHash?: string; srcShaUtil?: string } = {})
   '.tinkerable/artifacts/index.json': JSON.stringify({
     schemaVersion: 1,
     toolchain: {
-      transpiler: '@immediately-run/transpiler',
+      transpiler: '@lofcz/transpiler',
       version: TRANSPILER_VERSION,
       toolchainHash: over.toolchainHash ?? EMBEDDED_TOOLCHAIN_HASH,
       preset: 'react',

@@ -2,7 +2,7 @@ import {
   augmentDependencies as augmentReactDependencies,
   PLAIN_BABEL_CONFIG,
   REACT_REFRESH_BABEL_CONFIG,
-} from '@immediately-run/transpiler';
+} from '@lofcz/transpiler';
 import { Bundler } from '../../bundler';
 import { DepMap } from '../../module-registry';
 import { Module } from '../../module/Module';

@@ -10,6 +10,7 @@ import { ErrorRecord, listenToRuntimeErrors } from './error-listener';
 import { BundlerError } from './errors/BundlerError';
 import { CompilationError } from './errors/CompilationError';
 import { errorMessage } from './errors/util';
+import { showErrorOverlay, clearErrorOverlay } from './errors/overlay';
 import { handleEvaluate, hookConsole } from './integrations/console';
 import { IFrameParentMessageBus } from './protocol/iframe';
 import { AuthService } from './auth/AuthService';
@@ -264,7 +265,7 @@ class SandpackInstance {
         // @ts-ignore
         path: runtimeError.error.path,
         message: runtimeError.error.message,
-        payload: { frames: runtimeError.stackFrames },
+        payload: { frames: runtimeError.stackFrames, stack: runtimeError.error.stack },
       });
     });
 
@@ -537,6 +538,11 @@ class SandpackInstance {
       firstLoad: this.bundler.isFirstLoad,
     });
 
+    // A new compile supersedes whatever error is currently on screen; clear it
+    // optimistically. A failure below re-shows the overlay, a success leaves
+    // the running app visible.
+    clearErrorOverlay();
+
     this.messageBus.sendMessage('status', { status: 'initializing' });
 
     if (this.bundler.isFirstLoad) {
@@ -565,7 +571,16 @@ class SandpackInstance {
     } catch (error: unknown) {
       compileFailed = true;
       logger.error(error);
-      this.messageBus.sendMessage('action', errorMessage(error as CompilationError));
+      const cerr = error as CompilationError;
+      showErrorOverlay({
+        title: cerr.title || 'Build failed',
+        message: cerr.message || String(error),
+        path: cerr.path,
+        line: cerr.line,
+        column: cerr.column,
+        stack: (error as Error)?.stack,
+      });
+      this.messageBus.sendMessage('action', errorMessage(cerr));
       this.messageBus.sendMessage('done', { compilatonError: true });
     } finally {
       logger.debug(logger.logFactory('Bundling', `finished in  ${Date.now() - bundlingStartTime}ms`));
@@ -604,10 +619,18 @@ class SandpackInstance {
         logger.groupEnd();
       } catch (error: unknown) {
         logger.error(error);
-
+        const berr = error as BundlerError;
+        showErrorOverlay({
+          title: berr.title || 'Evaluation error',
+          message: berr.message || String(error),
+          path: berr.path,
+          line: berr.line,
+          column: berr.column,
+          stack: (error as Error)?.stack,
+        });
         this.messageBus.sendMessage(
           'action',
-          errorMessage(error as BundlerError) // TODO: create a evaluation error
+          errorMessage(berr) // TODO: create a evaluation error
         );
         this.messageBus.sendMessage('done', { compilatonError: true });
       }
