@@ -19,10 +19,8 @@
     "start": "node ./server.js",
     "gen:sdk-versions": "node scripts/gen-sdk-versions.mjs",
     "gen:toolchain-hash": "node scripts/gen-toolchain-hash.mjs",
-    "build": "npm run gen:sdk-versions && npm run gen:toolchain-hash && npm run build:babel-worker && npm run sync:babel-worker && npm run build:parcel",
+    "build": "npm run gen:sdk-versions && npm run gen:toolchain-hash && npm run build:parcel",
     "build:parcel": "parcel build ./src/index.html --target default --no-scope-hoist",
-    "build:babel-worker": "parcel build --target babelWorker --no-scope-hoist --cache-dir .parcel-cache-worker",
-    "sync:babel-worker": "./scripts/sync-babel-worker.sh",
     "test": "jest",
     "typecheck": "tsc --noEmit",
     "format": "prettier --write \"./src/**/*.{ts,tsx,js,jsx,json}\"",
@@ -47,16 +45,6 @@
       "context": "browser",
       "includeNodeModules": true,
       "publicUrl": "./"
-    },
-    "babelWorker": {
-      "source": "src/bundler/transforms/babel/babel-worker.ts",
-      "distDir": "dist-worker",
-      "context": "web-worker",
-      "outputFormat": "global",
-      "isLibrary": false,
-      "optimize": true,
-      "sourceMap": false,
-      "includeNodeModules": true
     }
   },
   "dependencies": {
