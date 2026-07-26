@@ -19,10 +19,17 @@ import { NodeModule } from './NodeModule';
  * Babel. Only trust that when the CDN claims success (`t !== false`) AND the
  * body has no residual ESM `import`/`export` (historical SWC helper-order bug
  * left bare imports → "$csb$eval: Cannot use import statement outside a module").
+ *
+ * Helper-inlining correctness (`_interop_require_*` defined before use) is
+ * guaranteed by the CDN producer and enforced by its on-disk format version
+ * (`DISK_FORMAT` in the CDN's disk_cache.rs): artifacts built before helpers
+ * were inlined are keyed under an older format and reprocessed on load, so a
+ * broken bundle can never be served. No runtime content-sniffing is needed here.
  */
 function trustCdnPrecompiled(file: ICDNModuleFile): boolean {
   if (file.t === false) return false;
-  return !scanCjsModule(file.c).isEsm;
+  if (scanCjsModule(file.c).isEsm) return false;
+  return true;
 }
 
 // dependency => version range
